@@ -134,12 +134,32 @@ normal play.
 
 ## Status
 
-Verified: builds clean (`build Succeeded errors=0`, 69 MB player, level report 0 warnings) and
-**13/13 self-test checks pass against the built player** — the park rule, both near-miss rejections,
-tail-in, the scrape counter and the clock have all been exercised end to end.
+Verified, including the visuals:
 
-Not yet verified: the **visuals**. All reasoning above is numeric. The game has never been seen
-rendering — a Unity standalone does not expose a macOS accessibility surface, so window capture and
-synthetic input are both blocked, and the Editor route needs the MCP bridge port. Confirming the
-camera, the glowing target bay and the HUD layout is still outstanding. **Drive it by hand** — open
-the built app and play lot 1, which is the quickest way to confirm it looks right.
+- builds clean (`build Succeeded errors=0`, 69 MB player, level report 0 warnings)
+- **13/13 self-test checks pass against the built player** — the park rule, both near-miss
+  rejections, tail-in, the scrape counter and the clock have all been exercised end to end
+- **the Editor renders it correctly**: Hierarchy populated (`Sun / Lot / Car / Main Camera / Game`),
+  Game view showing the asphalt lot with painted bays, the car, the glowing cyan target beam, and
+  the full HUD — `LOT 1/6 EMPTY LOT`, `TIME`, `SCRAPES 0/3`, `ALIGNMENT 40% (corners 0%, 0° off
+  axis)`, `BAY 15.5 m`, `0 km/h`, `gear N`, and the control line.
+
+### Opening the project
+
+Open `Assets/CarParking/Scenes/Parking.unity` if the Hierarchy is empty — see the trap below.
+
+## Traps hit while building this
+
+- **An empty Hierarchy means the wrong scene is open, not a broken project.** This project was
+  cloned from `car-game`, so `Library/LastSceneManagerSetup.txt` still named
+  `Assets/CarGame/Scenes/Race.unity`, a scene that was deleted during the strip-down. Unity responds
+  by opening a blank *Untitled* scene, which looks exactly like a project where nothing was ever
+  built. Open the real scene once and Unity rewrites that file itself.
+- **A Unity Editor window can sit entirely off-screen.** `agent-desktop list-windows` reported the
+  Game window at `x = -1349` on a 1512-wide display, so every screen capture showed the desktop and
+  nothing else — including a full-screen `screencapture`. Reading the window bounds from
+  `list-windows` and moving it back on screen (or capturing with `--window-id`) is what actually
+  finds it. "The window renders nothing" and "the window is not on the display" look identical
+  otherwise.
+- **The `-projectPath` trap** in batchmode (see above), which silently built `car-game` instead of
+  this project.
