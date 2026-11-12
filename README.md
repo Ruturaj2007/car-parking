@@ -153,6 +153,17 @@ Open `Assets/CarParking/Scenes/Parking.unity` if the Hierarchy is empty — see 
 
 ## Traps hit while building this
 
+- **A prop on the wrong axis is a wall, and a centre-only check will not see it.** `PropDef.Block`
+  and `PropDef.Kerb` put their `length` argument on the Z extent instead of X. Because props are
+  placed with their X/Z extents as authored and then yawed, lot 5's "36 m kerb" became a 36 m wall
+  running north-south through the target bay across the whole 14 m deep lot, and lot 6's two
+  barriers became 13 m and 12 m slabs running the wrong way. `ReportLevels` reported **0 warnings**
+  the entire time because it only ever tested prop *centres*. It now checks the yawed footprint of
+  every prop and the spawned car's real 1.80 × 4.10 m body — and check G in the self-test overlaps
+  each lot's bay and spawn and asserts nothing `Obstacle`-marked is inside either.
+- **A spawn clears the wall on paper and still starts with the car inside it.** Lot 5 spawned at
+  x = −16 with yaw 90, so the car's 4.35 m body spanned X −18.00…−13.65 while the wall's inner face
+  sat at −18.0. Physics shoved it on spawn. The check now uses the footprint, not the point.
 - **The car could not move at all, and every test passed.** A wheel-less car is a flat box that has
   to *slide*, so the lot floor's friction fights the engine. Measured: ground contact decelerates it
   at a constant **~11.8 m/s²**, while the engine's `acceleration` is only **8.5 m/s²** — so at full

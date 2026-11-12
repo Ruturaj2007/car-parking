@@ -21,11 +21,13 @@ namespace CarParking
         public static PropDef Pillar(float x, float z, float w, float h)
         { return new PropDef { kind = PropKind.Pillar, x = x, z = z, sx = w, sy = h, sz = w }; }
 
+        /// <summary>A barrier lying across the lot. <paramref name="length"/> is its extent on X before yaw.</summary>
         public static PropDef Block(float x, float z, float yaw, float thickness, float height, float length)
-        { return new PropDef { kind = PropKind.Block, x = x, z = z, yaw = yaw, sx = thickness, sy = height, sz = length }; }
+        { return new PropDef { kind = PropKind.Block, x = x, z = z, yaw = yaw, sx = length, sy = height, sz = thickness }; }
 
+        /// <summary>A kerb running east-west. <paramref name="length"/> is its extent on X.</summary>
         public static PropDef Kerb(float x, float z, float thickness, float height, float length)
-        { return new PropDef { kind = PropKind.Kerb, x = x, z = z, sx = thickness, sy = height, sz = length }; }
+        { return new PropDef { kind = PropKind.Kerb, x = x, z = z, sx = length, sy = height, sz = thickness }; }
     }
 
     /// <summary>A painted bay: centre, heading, and full width (across the car) and length (along it).</summary>
@@ -156,13 +158,13 @@ namespace CarParking
                 name = "Parallel Parking",
                 hint = "Along the kerb, between two parked cars. Swing out, then back in.",
                 lotW = 36f, lotL = 14f, timeLimit = 90f,
-                spawnX = -16f, spawnZ = 0.5f, spawnYaw = 90f,
+                spawnX = -14.5f, spawnZ = 0.5f, spawnYaw = 90f,
                 target = BayDef.At(-0.55f, 4.6f, 90f, 2.4f, 6.6f),
                 bays = new[] { BayDef.At(-0.55f, 4.6f, 90f, 2.4f, 6.6f) },
                 props = new[]
                 {
                     PropDef.Car(-6.6f, 4.6f, 90f, Silver),
-                    PropDef.Car(4.9f, 4.6f, 90f, Red),
+                    PropDef.Car(5.2f, 4.6f, 90f, Red),
                     PropDef.Car(-14.5f, 4.6f, 90f, Grey),
                     PropDef.Car(12.8f, 4.6f, 90f, Green),
                     PropDef.Kerb(0f, 6.4f, 0.5f, 0.26f, 36f),

@@ -166,7 +166,49 @@ namespace CarParking
                                     travelled, car.acceleration, car.SpeedMps));
             }
 
+            // ---------------------------------------------------------------- G: every lot is physically usable
+            // A prop authored on the wrong axis is invisible to a coordinate check but shows up as a
+            // wall through the target bay — lot 5 shipped with a 36 m kerb bisecting it. Overlap the
+            // bay and the spawn and assert nothing solid is inside them.
+            for (int i = 0; i < mgr.LevelCount; i++)
+            {
+                mgr.LoadLevel(i);
+                yield return WaitFor(mgr, ParkingManager.Phase.Playing, 5f);
+
+                var bay = lot.TargetBay;
+                if (bay == null) continue;
+
+                var half = new Vector3(bay.size.x * 0.5f - 0.05f, 0.6f, bay.size.y * 0.5f - 0.05f);
+                var blocked = BlockersIn(bay.transform.position + Vector3.up * 0.4f, half, bay.transform.rotation);
+                Check(blocked.Length == 0,
+                      "lot " + (i + 1) + " '" + mgr.LevelName + "' target bay is clear of obstacles",
+                      blocked.Length == 0 ? "nothing overlaps the bay" : "blocked by: " + blocked);
+
+                var dl = Levels.All[i];
+                var spawnHalf = new Vector3(0.90f - 0.05f, 0.6f, 2.05f - 0.05f);
+                var spawnBlocked = BlockersIn(new Vector3(dl.spawnX, 0.4f, dl.spawnZ), spawnHalf,
+                                              Quaternion.Euler(0f, dl.spawnYaw, 0f));
+                Check(spawnBlocked.Length == 0,
+                      "lot " + (i + 1) + " '" + mgr.LevelName + "' spawn is clear of obstacles",
+                      spawnBlocked.Length == 0 ? "nothing overlaps the spawn" : "blocked by: " + spawnBlocked);
+            }
+
             yield return Finish();
+        }
+
+        /// <summary>Every Obstacle-marked collider overlapping the box, for the reachability checks.</summary>
+        static string BlockersIn(Vector3 centre, Vector3 half, Quaternion rot)
+        {
+            var hits = Physics.OverlapBox(centre, half, rot, ~0, QueryTriggerInteraction.Ignore);
+            var sb = new StringBuilder();
+            foreach (var h in hits)
+            {
+                if (h == null) continue;
+                if (h.GetComponentInParent<Obstacle>() == null) continue;
+                if (sb.Length > 0) sb.Append(", ");
+                sb.Append(h.name);
+            }
+            return sb.ToString();
         }
 
         // ------------------------------------------------------------------ helpers

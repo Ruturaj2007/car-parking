@@ -174,17 +174,39 @@ namespace CarParking.EditorTools
                     }
                 }
 
-                if (Mathf.Abs(d.spawnX) > hx || Mathf.Abs(d.spawnZ) > hz)
+                // The spawned car is a solid 1.80 x 4.10 box, not a point: a spawn that clears the
+                // wall on paper can still start with the car's tail buried in it.
+                const float carHalfW = 0.90f, carHalfL = 2.05f;
+                float syaw = d.spawnYaw * Mathf.Deg2Rad;
+                float spawnEx = Mathf.Abs(Mathf.Cos(syaw)) * carHalfW + Mathf.Abs(Mathf.Sin(syaw)) * carHalfL;
+                float spawnEz = Mathf.Abs(Mathf.Sin(syaw)) * carHalfW + Mathf.Abs(Mathf.Cos(syaw)) * carHalfL;
+                if (Mathf.Abs(d.spawnX) + spawnEx > hx || Mathf.Abs(d.spawnZ) + spawnEz > hz)
                 {
-                    Debug.LogWarning(string.Format("[Levels] lot {0} '{1}': spawn ({2:0.0},{3:0.0}) is outside the lot",
-                                      i + 1, d.name, d.spawnX, d.spawnZ));
+                    Debug.LogWarning(string.Format(
+                        "[Levels] lot {0} '{1}': spawn ({2:0.0},{3:0.0}) yaw {4:0} leaves the car's body past the wall",
+                        i + 1, d.name, d.spawnX, d.spawnZ, d.spawnYaw));
                     warnings++;
                 }
 
                 for (int p = 0; p < d.props.Length; p++)
                 {
                     var pr = d.props[p];
-                    if (pr.kind != PropKind.ParkedCar && pr.kind != PropKind.Cone) continue;
+
+                    // Props are authored with X as the long axis and then yawed, so a factory that
+                    // swaps length into Z turns a kerb into a 36 m wall across the lot. Check the
+                    // whole footprint, not just the centre.
+                    float pyaw = pr.yaw * Mathf.Deg2Rad;
+                    float pc = Mathf.Abs(Mathf.Cos(pyaw)), ps = Mathf.Abs(Mathf.Sin(pyaw));
+                    float ex = (pc * pr.sx + ps * pr.sz) * 0.5f;
+                    float ez = (ps * pr.sx + pc * pr.sz) * 0.5f;
+                    if (Mathf.Abs(pr.x) + ex > hx || Mathf.Abs(pr.z) + ez > hz)
+                    {
+                        Debug.LogWarning(string.Format(
+                            "[Levels] lot {0} '{1}': prop {2} ({3}) at ({4:0.0},{5:0.0}) has a {6:0.0} x {7:0.0} footprint and pokes past the wall",
+                            i + 1, d.name, p, pr.kind, pr.x, pr.z, ex * 2f, ez * 2f));
+                        warnings++;
+                    }
+
                     if (pr.kind == PropKind.ParkedCar &&
                         Vector2.Distance(new Vector2(pr.x, pr.z), new Vector2(d.spawnX, d.spawnZ)) < 4f)
                     {
