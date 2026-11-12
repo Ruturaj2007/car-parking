@@ -134,6 +134,38 @@ namespace CarParking
             Check(mgr.phase == ParkingManager.Phase.Failed,
                   "running out of time fails the lot", "phase=" + mgr.phase);
 
+            // ---------------------------------------------------------------- F: the engine actually pulls
+            // Every check above moves the car with Teleport, which bypasses AddForce entirely — and
+            // that is exactly how a real bug slipped through: the car has no wheels, so it slides on
+            // a flat box collider, and ground friction decelerated it faster than the engine could
+            // accelerate. The car sat pinned at full throttle while every check here still passed.
+            {
+                mgr.LoadLevel(0);
+                yield return WaitFor(mgr, ParkingManager.Phase.Playing, 5f);
+
+                var def = Levels.All[0];
+                car.Teleport(new Vector3(def.spawnX, 0.35f, def.spawnZ), Quaternion.Euler(0f, def.spawnYaw, 0f));
+                yield return Wait(1.0f);                 // let it settle onto the lot floor
+
+                bool wasLocked = car.ControlsLocked;
+                car.ControlsLocked = true;               // silence the controller so only the engine force acts
+                float z0 = car.transform.position.z;
+                const int steps = 25;                    // 0.5 s at the fixed step
+                for (int i = 0; i < steps; i++)
+                {
+                    car.Body.WakeUp();
+                    car.Body.AddForce(car.transform.forward * car.acceleration, ForceMode.Acceleration);
+                    yield return new WaitForFixedUpdate();
+                }
+                float travelled = car.transform.position.z - z0;
+                car.ControlsLocked = wasLocked;
+
+                Check(travelled > 1.0f,
+                      "the engine pulls the car away from rest on the lot floor (not pinned by friction)",
+                      string.Format("moved {0:0.00} m in 0.50 s at acceleration {1:0.0} -> {2:0.00} m/s",
+                                    travelled, car.acceleration, car.SpeedMps));
+            }
+
             yield return Finish();
         }
 

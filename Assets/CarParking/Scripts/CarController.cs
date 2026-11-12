@@ -40,7 +40,7 @@ namespace CarParking
         bool _handbrake;
 
         public Rigidbody Body => _rb;
-        public float SpeedMps => _rb ? Vector3.Dot(_rb.velocity, transform.forward) : 0f;
+        public float SpeedMps => _rb ? Vector3.Dot(_rb.linearVelocity, transform.forward) : 0f;
         public float SpeedKph => Mathf.Abs(SpeedMps) * 3.6f;
         public float SteerInput => _steer;
         public bool Reversing => SpeedMps < -0.3f;
@@ -72,7 +72,7 @@ namespace CarParking
 
             Vector3 forward = transform.forward; forward.y = 0f; forward.Normalize();
             Vector3 right = transform.right; right.y = 0f; right.Normalize();
-            float speed = Vector3.Dot(_rb.velocity, forward);
+            float speed = Vector3.Dot(_rb.linearVelocity, forward);
 
             // ---- longitudinal: throttle, brake, reverse, coast ----
             if (_throttle > 0.01f)
@@ -96,7 +96,7 @@ namespace CarParking
                 _rb.AddForce(-forward * (Mathf.Sign(speed) * brakeDeceleration * 0.8f), ForceMode.Acceleration);
 
             // ---- lateral grip: kill sideways velocity so it corners instead of drifting ----
-            float lateral = Vector3.Dot(_rb.velocity, right);
+            float lateral = Vector3.Dot(_rb.linearVelocity, right);
             _rb.AddForce(-right * (lateral * lateralGrip), ForceMode.Acceleration);
 
             // ---- steering as a speed-scaled yaw; authority arrives almost immediately so
@@ -139,13 +139,13 @@ namespace CarParking
 
         public void Teleport(Vector3 position, Quaternion rotation)
         {
-            _rb.velocity = Vector3.zero;
+            _rb.linearVelocity = Vector3.zero;
             _rb.angularVelocity = Vector3.zero;
             transform.SetPositionAndRotation(position, rotation);
             _rb.position = position;
             _rb.rotation = rotation;
         }
 
-        public void Freeze() { _rb.velocity = Vector3.zero; _rb.angularVelocity = Vector3.zero; }
+        public void Freeze() { _rb.linearVelocity = Vector3.zero; _rb.angularVelocity = Vector3.zero; }
     }
 }

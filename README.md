@@ -116,7 +116,7 @@ a known pose, let the game decide, assert the verdict. Nothing is mocked.
 grep -E "^(PASS|FAIL|=== )" /tmp/selftest.log     # exits 0 when all pass
 ```
 
-13 checks, all passing:
+14 checks, all passing:
 
 ```
 PASS  lot 1..6 accept a neat park   [phase=Parked align=1.00 cornerScore=1.00 heading=0° worstCorner=0.00m]
@@ -126,7 +126,9 @@ PASS  accepts a tail-in park              [phase=Parked headingError=0°]
 PASS  one scrape is counted but does not fail the lot  [hits=1 phase=Playing]
 PASS  three scrapes fail the lot                       [hits=3 phase=Failed]
 PASS  running out of time fails the lot                [phase=Failed]
-=== RESULT: ALL PASS — 13 passed, 0 failed ===
+PASS  the engine pulls the car away from rest on the lot floor (not pinned by friction)
+      [moved 1.10 m in 0.50 s at acceleration 8.5 -> 4.23 m/s]
+=== RESULT: ALL PASS — 14 passed, 0 failed ===
 ```
 
 `ParkingSelfTest` only does anything when `-selftest` is on the command line, so it is inert in
@@ -137,8 +139,9 @@ normal play.
 Verified, including the visuals:
 
 - builds clean (`build Succeeded errors=0`, 69 MB player, level report 0 warnings)
-- **13/13 self-test checks pass against the built player** — the park rule, both near-miss
-  rejections, tail-in, the scrape counter and the clock have all been exercised end to end
+- **14/14 self-test checks pass against the built player** — the park rule, both near-miss
+  rejections, tail-in, the scrape counter, the clock, and that the engine actually pulls the car
+  away from rest on the lot floor
 - **the Editor renders it correctly**: Hierarchy populated (`Sun / Lot / Car / Main Camera / Game`),
   Game view showing the asphalt lot with painted bays, the car, the glowing cyan target beam, and
   the full HUD — `LOT 1/6 EMPTY LOT`, `TIME`, `SCRAPES 0/3`, `ALIGNMENT 40% (corners 0%, 0° off
@@ -150,6 +153,20 @@ Open `Assets/CarParking/Scenes/Parking.unity` if the Hierarchy is empty — see 
 
 ## Traps hit while building this
 
+- **The car could not move at all, and every test passed.** A wheel-less car is a flat box that has
+  to *slide*, so the lot floor's friction fights the engine. Measured: ground contact decelerates it
+  at a constant **~11.8 m/s²**, while the engine's `acceleration` is only **8.5 m/s²** — so at full
+  throttle the car was pinned to the floor. Isolation: float it 3 m up with gravity off and the same
+  force accelerates it exactly as physics dictates (`8.5 → 0.170 m/s`, `20 → 0.400`, `60 → 1.199` per
+  0.02 s step); on the ground, `8.5` produced `-0.001`. The original `car-game` only worked because
+  its `acceleration` is **19**. The fix is a frictionless `PhysicsMaterial` on the car's collider
+  (`PhysicsMaterialCombine.Minimum`), which leaves the controller's own `lateralGrip`, `coastDamping`
+  and `brakeDeceleration` as the only things governing the car — which is what that code always
+  assumed. **Raising `acceleration` past ~12 also "works" but leaves the car fighting the ground.**
+- **A test that moves the car by `Teleport` never exercises `AddForce`.** The self-test drove into
+  bays by teleporting, so it exercised the bay rule perfectly while the car was undrivable. Any
+  physics-driven behaviour needs at least one check that applies the real force on the real floor;
+  see check F in `ParkingSelfTest`.
 - **An empty Hierarchy means the wrong scene is open, not a broken project.** This project was
   cloned from `car-game`, so `Library/LastSceneManagerSetup.txt` still named
   `Assets/CarGame/Scenes/Race.unity`, a scene that was deleted during the strip-down. Unity responds
@@ -161,5 +178,13 @@ Open `Assets/CarParking/Scenes/Parking.unity` if the Hierarchy is empty — see 
   `list-windows` and moving it back on screen (or capturing with `--window-id`) is what actually
   finds it. "The window renders nothing" and "the window is not on the display" look identical
   otherwise.
+- **Unity only sends keystrokes to the *focused* view.** Pressing Play is not enough — click inside
+  the Game view, or WASD does nothing. `EditorWindow.focusedWindow == null` while the app is
+  frontmost is the tell. This is editor behaviour, not a game bug.
+- **Batchmode refuses to touch a project an editor has open** and exits 1 in about a second with no
+  compile and no builder output, which reads exactly like a build that silently did nothing. Either
+  close the editor or drive the build through it over MCP.
+- **`EditorSceneManager.NewScene` throws during play mode** ("This cannot be used during play mode"),
+  so a rebuild triggered from a live editor must stop play first.
 - **The `-projectPath` trap** in batchmode (see above), which silently built `car-game` instead of
   this project.

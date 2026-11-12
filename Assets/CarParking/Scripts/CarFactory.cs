@@ -38,6 +38,28 @@ namespace CarParking
 
         public static Material LoadMaterial(string name) => Resources.Load<Material>(MaterialFolder + name);
 
+        static PhysicsMaterial _gripFree;
+
+        /// <summary>
+        /// The car has no wheels — it is a flat box that has to *slide*. That makes the lot floor's
+        /// friction fight the engine, and it loses: measured deceleration from ground contact is
+        /// about 11.8 m/s², more than the engine's acceleration, so the car sits pinned at full
+        /// throttle. A frictionless material on the car's collider lets the controller be the only
+        /// thing deciding how it moves, which is what the lateral-grip and coast terms already assume.
+        /// </summary>
+        static PhysicsMaterial GripFree()
+        {
+            if (_gripFree == null)
+            {
+                _gripFree = new PhysicsMaterial("CarGrip");
+                _gripFree.dynamicFriction = 0f;
+                _gripFree.staticFriction = 0f;
+                _gripFree.bounciness = 0f;
+                _gripFree.frictionCombine = PhysicsMaterialCombine.Minimum;
+            }
+            return _gripFree;
+        }
+
         /// <summary>Instantiate the car mesh under <paramref name="parent"/>, orient it, paint it.</summary>
         public static GameObject SpawnModel(Transform parent, Color? paintOverride = null)
         {
@@ -115,12 +137,13 @@ namespace CarParking
 
             var rb = root.AddComponent<Rigidbody>();
             rb.mass = 1200f;
-            rb.drag = 0.02f;
-            rb.angularDrag = 2.5f;
+            rb.linearDamping = 0.02f;
+            rb.angularDamping = 2.5f;
 
             var box = root.AddComponent<BoxCollider>();
             box.center = new Vector3(0f, BodyCentreY, 0f);
             box.size = BodySize;
+            box.material = GripFree();      // see GripFree(): otherwise ground friction pins the car
 
             var cc = root.AddComponent<CarController>();
             root.AddComponent<CollisionReporter>();
