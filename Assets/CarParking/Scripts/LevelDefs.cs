@@ -190,12 +190,16 @@ namespace CarParking
                     PropDef.Car(-4.6f, 10f, 180f, Silver),
                     PropDef.Car(-1.0f, 10f, 180f, Grey),
                     PropDef.Car(2.6f, 10f, 180f, Red),
-                    PropDef.Block(-8.5f, 6f, 0f, 0.6f, 1.3f, 13f),
-                    PropDef.Block(9.0f, 6f, 0f, 0.6f, 1.3f, 12f),
-                    PropDef.Pillar(-6f, 1f, 0.9f, 3.6f),
-                    PropDef.Pillar(6f, 1f, 0.9f, 3.6f),
-                    PropDef.Cone(-1.5f, 4f),
-                    PropDef.Cone(2.5f, 4f),
+                    // The barrier must leave a real aisle in front of the bays. At z=6 its north
+                    // face sat 1.53 m from the parked cars while the car is 1.9 m wide, so the lot
+                    // was impassable. At z=1.5 the aisle is 6.03 m.
+                    PropDef.Block(-8.5f, 1.5f, 0f, 0.6f, 1.3f, 13f),
+                    PropDef.Block(9.0f, 1.5f, 0f, 0.6f, 1.3f, 12f),
+                    PropDef.Pillar(-5f, -6f, 0.9f, 3.6f),
+                    PropDef.Pillar(5f, -6f, 0.9f, 3.6f),
+                    // these two mark the gap edges from the approach side, without blocking the aisle
+                    PropDef.Cone(-2.6f, -1.5f),
+                    PropDef.Cone(3.6f, -1.5f),
                 },
             },
         };

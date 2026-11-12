@@ -193,7 +193,96 @@ namespace CarParking
                       spawnBlocked.Length == 0 ? "nothing overlaps the spawn" : "blocked by: " + spawnBlocked);
             }
 
+            // ---------------------------------------------------------------- H: the bay is reachable
+            // Clearance is invisible to a coordinate check. Lot 6 shipped with a 1.53 m aisle for a
+            // 1.9 m car; every number in the level definition looked fine. Flood-fill the lot with a
+            // car-width probe from the spawn to the bay and assert a path exists.
+            {
+                const float cell = 0.6f;
+                const float carHalfWidth = 0.95f;         // half of the car's 1.9 m width
+                for (int i = 0; i < mgr.LevelCount; i++)
+                {
+                    mgr.LoadLevel(i);
+                    yield return WaitFor(mgr, ParkingManager.Phase.Playing, 5f);
+                    var bay = lot.TargetBay;
+                    if (bay == null) continue;
+
+                    var dl = Levels.All[i];
+                    float hx = dl.lotW * 0.5f - 0.35f, hz = dl.lotL * 0.5f - 0.35f;
+                    int nx = Mathf.Max(2, Mathf.FloorToInt(hx * 2f / cell));
+                    int nz = Mathf.Max(2, Mathf.FloorToInt(hz * 2f / cell));
+                    var free = new bool[nx * nz];
+
+                    for (int gx = 0; gx < nx; gx++)
+                        for (int gz = 0; gz < nz; gz++)
+                            free[gz * nx + gx] = IsClear(-hx + (gx + 0.5f) * cell,
+                                                         -hz + (gz + 0.5f) * cell, carHalfWidth);
+
+                    int sx = Mathf.Clamp(Mathf.FloorToInt((dl.spawnX + hx) / cell), 0, nx - 1);
+                    int sz = Mathf.Clamp(Mathf.FloorToInt((dl.spawnZ + hz) / cell), 0, nz - 1);
+                    int bx = Mathf.Clamp(Mathf.FloorToInt((bay.transform.position.x + hx) / cell), 0, nx - 1);
+                    int bz = Mathf.Clamp(Mathf.FloorToInt((bay.transform.position.z + hz) / cell), 0, nz - 1);
+
+                    bool reachable = FloodFilled(free, nx, nz, sz * nx + sx, bz * nx + bx);
+                    Check(reachable,
+                          "lot " + (i + 1) + " '" + mgr.LevelName + "' bay is reachable from the spawn",
+                          reachable
+                            ? string.Format("car-width path exists over a {0}x{1} grid of {2:0.0} m cells", nx, nz, cell)
+                            : string.Format("NO PATH from spawn cell ({0},{1}) to bay cell ({2},{3}) with a {4:0.0} m probe",
+                                            sx, sz, bx, bz, carHalfWidth * 2f));
+                }
+            }
+
             yield return Finish();
+        }
+
+        /// <summary>True when a car-width probe centred here touches nothing but the lot floor.</summary>
+        static bool IsClear(float x, float z, float halfWidth)
+        {
+            var hits = Physics.OverlapBox(new Vector3(x, 0.4f, z),
+                                          new Vector3(halfWidth, 0.4f, halfWidth),
+                                          Quaternion.identity, ~0, QueryTriggerInteraction.Ignore);
+            foreach (var h in hits)
+            {
+                if (h == null) continue;
+                if (h.name == "Ground") continue;                              // the one slab every lot shares
+                if (h.GetComponentInParent<CarController>() != null) continue;  // the car we are steering
+                return false;                                                  // walls, parked cars, cone, pillar, barrier
+            }
+            return true;
+        }
+
+        /// <summary>4-connected flood fill across the free cells.</summary>
+        static bool FloodFilled(bool[] free, int nx, int nz, int start, int goal)
+        {
+            if (start < 0 || start >= free.Length || goal < 0 || goal >= free.Length) return false;
+            if (!free[start] || !free[goal]) return false;
+
+            var seen = new bool[free.Length];
+            var queue = new System.Collections.Generic.Queue<int>();
+            seen[start] = true;
+            queue.Enqueue(start);
+
+            while (queue.Count > 0)
+            {
+                int c = queue.Dequeue();
+                if (c == goal) return true;
+                int cx = c % nx, cz = c / nx;
+
+                if (cx > 0) TryPush(free, seen, queue, c - 1);
+                if (cx < nx - 1) TryPush(free, seen, queue, c + 1);
+                if (cz > 0) TryPush(free, seen, queue, c - nx);
+                if (cz < nz - 1) TryPush(free, seen, queue, c + nx);
+            }
+            return false;
+        }
+
+        static void TryPush(bool[] free, bool[] seen, System.Collections.Generic.Queue<int> q, int idx)
+        {
+            if (idx < 0 || idx >= free.Length) return;
+            if (seen[idx] || !free[idx]) return;
+            seen[idx] = true;
+            q.Enqueue(idx);
         }
 
         /// <summary>Every Obstacle-marked collider overlapping the box, for the reachability checks.</summary>
