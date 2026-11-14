@@ -70,7 +70,7 @@ namespace CarParking
             new CarSpec
             {
                 key = "clk", displayName = "Mercedes CLK DTM",
-                modelResource = "Cars/clk/clk", autoFit = true, modelRotationDeg = new Vector3(0f, 180f, 0f),
+                modelResource = "Cars/clk/clk", autoFit = true,
                 mass = 1150f, acceleration = 10f, maxSpeed = 14.5f,
                 steerRateDegPerSec = 90f, lateralGrip = 16f,
             },
@@ -84,7 +84,7 @@ namespace CarParking
             new CarSpec
             {
                 key = "delorean", displayName = "DeLorean Time Machine",
-                modelResource = "Cars/delorean/delorean", autoFit = true, modelRotationDeg = new Vector3(0f, 180f, 0f),
+                modelResource = "Cars/delorean/delorean", autoFit = true,
                 mass = 1350f, acceleration = 8f, maxSpeed = 12.5f,
                 steerRateDegPerSec = 100f, lateralGrip = 12f,
             },

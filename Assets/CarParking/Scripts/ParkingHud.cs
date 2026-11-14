@@ -79,10 +79,13 @@ namespace CarParking
             DrawHitFlash();
         }
 
+        /// <summary>Shown small in the HUD so a "still broken" report can be tied to a specific build.</summary>
+        public const string BuildStamp = "build 2026-11-15 00:15";
+
         // ------------------------------------------------------------------ panels
         void DrawStatusPanel()
         {
-            var panel = new Rect(18, 18, 348, 196);
+            var panel = new Rect(18, 18, 350, 222);
             Fill(panel, new Color(0f, 0f, 0f, 0.48f));
 
             GUI.Label(new Rect(32, 26, 322, 28),
@@ -109,6 +112,11 @@ namespace CarParking
                           ? "TIME TAKEN  " + ParkingManager.Format(game.lastResultTime)
                           : game.LevelHint,
                       _tiny);
+
+            // stamp the build so a report of "still broken" can be tied to a specific player
+            GUI.color = new Color(1f, 1f, 1f, 0.30f);
+            GUI.Label(new Rect(32, 200, 322, 18), BuildStamp, _tiny);
+            GUI.color = Color.white;
         }
 
         void DrawAlignmentPanel()
