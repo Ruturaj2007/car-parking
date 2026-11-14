@@ -88,7 +88,7 @@ namespace CarParking.EditorTools
             var def0 = Levels.All[0];
             var spawn = new Vector3(def0.spawnX, 0.35f, def0.spawnZ);
             var rot = Quaternion.Euler(0f, def0.spawnYaw, 0f);
-            var carGO = CarFactory.CreatePlayerCar(null, spawn, rot);
+            var carGO = CarFactory.CreatePlayerCar(null, spawn, rot, CarCatalog.All[0]);
             var car = carGO.GetComponent<CarController>();
             if (car == null) { Debug.LogError("[GameBuilder] player car has no CarController"); return; }
 

@@ -45,6 +45,12 @@ namespace CarParking
         LevelDef _def;
         readonly Vector3[] _corners = new Vector3[4];
         const string BestKeyPrefix = "CarParking.Best.";
+        const string CarKeyPref = "CarParking.Car";
+
+        CarSpec _appliedCar;
+
+        /// <summary>The catalog entry being driven; persisted between runs.</summary>
+        public CarSpec CurrentCar { get; private set; }
 
         public LevelDef CurrentLevel => _def;
         public int LevelCount => Levels.All.Length;
@@ -60,6 +66,8 @@ namespace CarParking
             bestTimes = new float[Levels.All.Length];
             for (int i = 0; i < bestTimes.Length; i++)
                 bestTimes[i] = PlayerPrefs.GetFloat(BestKeyPrefix + i, -1f);
+
+            CurrentCar = CarCatalog.ByKey(PlayerPrefs.GetString(CarKeyPref, CarCatalog.All[0].key));
         }
 
         void Start()
@@ -103,7 +111,27 @@ namespace CarParking
             // number keys jump straight to a lot — handy when demonstrating
             for (int i = 0; i < LevelCount && i < 9; i++)
                 if (Input.GetKeyDown(KeyCode.Alpha1 + i)) LoadLevel(i);
+
+            if (Input.GetKeyDown(KeyCode.RightBracket)) NextCar();
+            if (Input.GetKeyDown(KeyCode.LeftBracket)) PrevCar();
         }
+
+        // ------------------------------------------------------------------ car selection
+        /// <summary>Switch to another car in the catalog and restart the current lot with it.</summary>
+        public void SelectCar(int index)
+        {
+            int n = CarCatalog.All.Length;
+            if (n == 0) return;
+
+            CurrentCar = CarCatalog.All[((index % n) + n) % n];
+            PlayerPrefs.SetString(CarKeyPref, CurrentCar.key);
+            PlayerPrefs.Save();
+
+            LoadLevel(levelIndex);
+        }
+
+        public void NextCar() => SelectCar(CarCatalog.IndexOf(CurrentCar.key) + 1);
+        public void PrevCar() => SelectCar(CarCatalog.IndexOf(CurrentCar.key) - 1);
 
         // ------------------------------------------------------------------ flow
         public void LoadLevel(int index)
@@ -112,6 +140,16 @@ namespace CarParking
             _def = Levels.All[levelIndex];
 
             lot.Build(_def);
+
+            // swap the body before positioning it, so the collider and bay-test footprint match it
+            if (_appliedCar != CurrentCar)
+            {
+                CarFactory.ApplySpec(car.gameObject, CurrentCar);
+                _appliedCar = CurrentCar;
+                Debug.Log(string.Format("[Parking] car '{0}' — {1:0.00} x {2:0.00} x {3:0.00} m, footprint {4:0.00} x {5:0.00}",
+                          CurrentCar.key, CurrentCar.bodySize.x, CurrentCar.bodySize.y, CurrentCar.bodySize.z,
+                          CurrentCar.footprint.x, CurrentCar.footprint.y));
+            }
 
             var spawn = new Vector3(_def.spawnX, 0.35f, _def.spawnZ);
             car.Teleport(spawn, Quaternion.Euler(0f, _def.spawnYaw, 0f));

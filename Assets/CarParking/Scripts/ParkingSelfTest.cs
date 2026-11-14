@@ -233,6 +233,79 @@ namespace CarParking
                 }
             }
 
+            // ---------------------------------------------------------------- I: every car loads
+            // A missing model, one still at 1/100 scale, or one whose stray helper mesh dwarfs the
+            // body all look perfectly fine in the catalog and fail at runtime.
+            {
+                int startIndex = CarCatalog.IndexOf(mgr.CurrentCar != null ? mgr.CurrentCar.key : CarCatalog.All[0].key);
+
+                for (int c = 0; c < CarCatalog.All.Length; c++)
+                {
+                    var spec = CarCatalog.All[c];
+                    mgr.SelectCar(c);
+                    yield return WaitFor(mgr, ParkingManager.Phase.Playing, 6f);
+
+                    var model = car.transform.Find("Model");
+                    if (model == null)
+                    {
+                        Check(false, "car '" + spec.key + "' loads a model", "no Model child under the car");
+                        continue;
+                    }
+
+                    Bounds mb;
+                    bool measured = CarFactory.TryMeasureLocal(model.gameObject, car.transform, out mb);
+                    float wid = measured ? mb.size.x : 0f;
+                    float len = measured ? mb.size.z : 0f;
+                    int renderers = model.GetComponentsInChildren<Renderer>(true).Length;
+
+                    Check(measured && len > 3.4f && len < 5.6f && wid > 1.4f && wid < 2.6f,
+                          "car '" + spec.key + "' loads at a sane car size",
+                          string.Format("{0:0.00} w x {1:0.00} l x {2:0.00} h m, {3} renderers",
+                                        wid, len, measured ? mb.size.y : 0f, renderers));
+
+                    Check(spec.footprint.x > 1.2f && spec.footprint.x < 2.6f &&
+                          spec.footprint.y > 3.0f && spec.footprint.y < 5.6f,
+                          "car '" + spec.key + "' derives a usable bay footprint",
+                          string.Format("{0:0.00} x {1:0.00} m, collider {2:0.00} x {3:0.00} x {4:0.00}",
+                                        spec.footprint.x, spec.footprint.y,
+                                        spec.bodySize.x, spec.bodySize.y, spec.bodySize.z));
+                }
+
+                // leave the player on whatever they had chosen, not on the last entry tested
+                mgr.SelectCar(startIndex);
+            }
+
+            // ---------------------------------------------------------------- J: it drives nose-first
+            // Nothing above can catch a model facing the wrong way: every test moves the car with
+            // physics, which does not care which end of the mesh is the nose. That is how a fully
+            // backwards car passed the whole suite. The stock car names its wheels, so measure them:
+            // the front pair must sit ahead of the rear pair along the axis the controller drives.
+            {
+                mgr.SelectCar(CarCatalog.IndexOf("stock"));
+                yield return WaitFor(mgr, ParkingManager.Phase.Playing, 5f);
+
+                var cc = car.GetComponent<CarController>();
+                if (cc != null && cc.allWheels != null && cc.allWheels.Length >= 4 &&
+                    cc.allWheels[0] != null && cc.allWheels[1] != null &&
+                    cc.allWheels[2] != null && cc.allWheels[3] != null)
+                {
+                    float flZ = car.transform.InverseTransformPoint(cc.allWheels[0].position).z;
+                    float frZ = car.transform.InverseTransformPoint(cc.allWheels[1].position).z;
+                    float rlZ = car.transform.InverseTransformPoint(cc.allWheels[2].position).z;
+                    float rrZ = car.transform.InverseTransformPoint(cc.allWheels[3].position).z;
+
+                    Check(flZ > rlZ && frZ > rrZ,
+                          "the car drives nose-first, not in reverse",
+                          string.Format("front FL z={0:+0.00;-0.00} FR z={1:+0.00;-0.00} must be ahead of rear RL z={2:+0.00;-0.00} RR z={3:+0.00;-0.00}",
+                                        flZ, frZ, rlZ, rrZ));
+                }
+                else
+                {
+                    Check(false, "the car drives nose-first, not in reverse",
+                          "CarController has no named wheels to measure");
+                }
+            }
+
             yield return Finish();
         }
 

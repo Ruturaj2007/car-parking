@@ -82,10 +82,10 @@ namespace CarParking
         // ------------------------------------------------------------------ panels
         void DrawStatusPanel()
         {
-            var panel = new Rect(18, 18, 336, 152);
+            var panel = new Rect(18, 18, 348, 196);
             Fill(panel, new Color(0f, 0f, 0f, 0.48f));
 
-            GUI.Label(new Rect(32, 26, 310, 28),
+            GUI.Label(new Rect(32, 26, 322, 28),
                       "LOT " + (game.levelIndex + 1) + "/" + game.LevelCount + "   " + game.LevelName.ToUpperInvariant(),
                       _label);
 
@@ -93,12 +93,18 @@ namespace CarParking
             float t = game.timeLeft;
             var timeColour = t > 20f ? Color.white : (t > 10f ? new Color(1f, 0.82f, 0.35f) : new Color(1f, 0.38f, 0.34f));
             GUI.color = timeColour;
-            GUI.Label(new Rect(32, 58, 310, 30), "TIME  " + ParkingManager.Format(Mathf.Max(0f, t)), _mid);
+            GUI.Label(new Rect(32, 56, 322, 30), "TIME  " + ParkingManager.Format(Mathf.Max(0f, t)), _mid);
             GUI.color = Color.white;
 
-            GUI.Label(new Rect(32, 94, 310, 24), "SCRAPES  " + game.hits + " / " + game.maxHits, _small);
-            GUI.Label(new Rect(32, 116, 310, 24), "BEST     " + ParkingManager.Format(game.BestTime), _small);
-            GUI.Label(new Rect(32, 138, 310, 24),
+            GUI.Label(new Rect(32, 90, 322, 24), "SCRAPES  " + game.hits + " / " + game.maxHits, _small);
+            GUI.Label(new Rect(32, 112, 322, 24), "BEST     " + ParkingManager.Format(game.BestTime), _small);
+
+            // the garage line — '[' and ']' cycle it
+            string carName = game.CurrentCar != null ? game.CurrentCar.displayName : "—";
+            GUI.Label(new Rect(32, 136, 322, 24), "CAR      ‹ " + carName + " ›", _small);
+            GUI.Label(new Rect(32, 156, 322, 24), "         [  ]  change car", _tiny);
+
+            GUI.Label(new Rect(32, 176, 322, 22),
                       game.phase == ParkingManager.Phase.Parked
                           ? "TIME TAKEN  " + ParkingManager.Format(game.lastResultTime)
                           : game.LevelHint,
@@ -193,7 +199,7 @@ namespace CarParking
         {
             if (game.phase == ParkingManager.Phase.Complete) return;
             GUI.Label(new Rect(0, Screen.height - 26, Screen.width, 22),
-                      "WASD / arrows drive   ·   SPACE handbrake   ·   C camera   ·   R retry lot   ·   1-6 jump",
+                      "WASD / arrows drive   ·   SPACE handbrake   ·   C camera   ·   R retry lot   ·   1-6 jump   ·   [ ] change car",
                       new GUIStyle(_small) { alignment = TextAnchor.MiddleCenter });
         }
 
