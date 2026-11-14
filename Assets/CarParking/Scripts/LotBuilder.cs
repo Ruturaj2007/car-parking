@@ -237,9 +237,14 @@ namespace CarParking
                     }
 
                     case PropKind.Kerb:
-                        Box(root, "Kerb", new Vector3(p.x, p.sy * 0.5f, p.z), Quaternion.identity,
+                    {
+                        // the kerb is solid, so it must also report as an obstacle — otherwise the
+                        // level validator walks straight through it and signs off a lot you cannot drive
+                        var k = Box(root, "Kerb", new Vector3(p.x, p.sy * 0.5f, p.z), Quaternion.identity,
                             new Vector3(p.sx, p.sy, p.sz), _kerb);
+                        k.AddComponent<Obstacle>().label = "kerb";
                         break;
+                    }
                 }
             }
         }
